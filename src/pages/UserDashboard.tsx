@@ -1,6 +1,41 @@
 import { Link } from 'react-router-dom'
+import { formatUnits } from 'viem'
+import { useAccount, useReadContract, useSwitchChain } from 'wagmi'
+import { base } from 'wagmi/chains'
+import { FPC_ADDRESS, erc20Abi } from '../config/contracts'
+import { useFpcPricing } from '../hooks/useFpcPricing'
+
+const shortenAddress = (address: string) => `${address.slice(0, 6)}...${address.slice(-4)}`
 
 const UserDashboard = () => {
+  const { address, chain, isConnected } = useAccount()
+  const { switchChain, isPending: isSwitching } = useSwitchChain()
+  const isOnBase = chain?.id === base.id
+  const pricing = useFpcPricing(1)
+
+  const { data: rawBalance, isLoading: isBalanceLoading, refetch: refetchBalance } = useReadContract({
+    address: FPC_ADDRESS,
+    abi: erc20Abi,
+    functionName: 'balanceOf',
+    args: [address!],
+    query: { enabled: Boolean(address && isOnBase) },
+  })
+
+  const { data: tokenDecimals } = useReadContract({
+    address: FPC_ADDRESS,
+    abi: erc20Abi,
+    functionName: 'decimals',
+    query: { enabled: isOnBase },
+  })
+
+  const decimals = Number(tokenDecimals ?? 18)
+  const fpcBalance = rawBalance ? Number(formatUnits(rawBalance, decimals)) : 0
+  const estimatedUsdcRaw =
+    rawBalance && pricing.usdcPerFpcRaw
+      ? (rawBalance * pricing.usdcPerFpcRaw) / 10n ** BigInt(decimals)
+      : 0n
+  const estimatedValue = Number(formatUnits(estimatedUsdcRaw, pricing.usdcDecimals))
+
   const mockTransactions = [
     { date: '2026-03-26', quantity: 1, status: 'Delivered', emoji: '✅' },
     { date: '2026-03-20', quantity: 1, status: 'Delivered', emoji: '✅' },
@@ -17,21 +52,58 @@ const UserDashboard = () => {
         <div className="bg-gray-900/50 backdrop-blur-lg p-8 rounded-2xl border border-gray-700 mb-8">
           <div className="flex items-center justify-between mb-6">
             <span className="text-gray-400 text-lg">Connected Wallet</span>
-            <span className="text-white font-mono text-lg">0x1234...5678</span>
+            <span className="text-white font-mono text-lg">{address ? shortenAddress(address) : 'Not connected'}</span>
           </div>
+          {!isConnected && <p className="text-yellow-400">Connect wallet to view balance</p>}
+          {isConnected && !isOnBase && (
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-yellow-500/40 bg-yellow-900/20 p-4">
+              <p className="text-yellow-300">Please switch to Base network</p>
+              <button
+                onClick={() => switchChain({ chainId: base.id })}
+                disabled={isSwitching}
+                className="rounded-lg bg-yellow-600 px-3 py-2 text-sm font-semibold text-white hover:bg-yellow-700 disabled:opacity-70"
+              >
+                {isSwitching ? 'Switching...' : 'Switch to Base'}
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="grid md:grid-cols-2 gap-6 mb-12">
           <div className="bg-gradient-to-br from-blue-900/30 to-blue-700/20 backdrop-blur-lg p-8 rounded-2xl border border-blue-500/30">
-            <h3 className="text-gray-400 text-sm uppercase tracking-wider mb-2">FPC Balance</h3>
-            <p className="text-5xl font-bold text-white mb-2">3</p>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-gray-400 text-sm uppercase tracking-wider">FPC Balance</h3>
+              {isConnected && isOnBase && (
+                <button
+                  onClick={() => refetchBalance()}
+                  className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  ↻ Refresh
+                </button>
+              )}
+            </div>
+            <p className="text-5xl font-bold text-white mb-2">
+              {isConnected && isOnBase ? (isBalanceLoading ? '...' : fpcBalance) : '—'}
+            </p>
             <p className="text-blue-400">tokens</p>
+            {isConnected && isOnBase && fpcBalance > 0 && (
+              <p className="text-gray-500 text-sm mt-1">= {Math.floor(fpcBalance)} dozen roses</p>
+            )}
           </div>
 
           <div className="bg-gradient-to-br from-purple-900/30 to-purple-700/20 backdrop-blur-lg p-8 rounded-2xl border border-purple-500/30">
-            <h3 className="text-gray-400 text-sm uppercase tracking-wider mb-2">Total Spent</h3>
-            <p className="text-5xl font-bold text-white mb-2">$45</p>
+            <h3 className="text-gray-400 text-sm uppercase tracking-wider mb-2">Estimated Value</h3>
+            <p className="text-5xl font-bold text-white mb-2">
+              ${isConnected && isOnBase && pricing.usdcPerFpcRaw ? estimatedValue.toFixed(6) : 'N/A'}
+            </p>
             <p className="text-purple-400">USDC</p>
+            <p className="text-gray-500 text-xs mt-2">
+              {pricing.loading
+                ? 'Reading on-chain price...'
+                : pricing.usdcPerFpc !== null
+                  ? `1 FPC ≈ ${pricing.usdcPerFpc.toFixed(6)} USDC`
+                  : 'No on-chain USDC quote'}
+            </p>
           </div>
         </div>
 

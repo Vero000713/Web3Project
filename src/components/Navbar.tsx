@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
+import WalletConnect from './WalletConnect'
 
 const Navbar = () => {
   const location = useLocation()
@@ -35,9 +36,7 @@ const Navbar = () => {
               ))}
             </div>
           </div>
-          <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
-            Connect Wallet
-          </button>
+          <WalletConnect />
         </div>
       </div>
     </nav>

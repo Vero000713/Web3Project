@@ -30,8 +30,8 @@ const LandingPage = () => {
                 <div className="text-4xl mb-4">🌹</div>
                 <h3 className="text-2xl font-bold mb-4">For Buyers</h3>
                 <p className="text-gray-300 leading-relaxed">
-                  Each token costs $15 and can be redeemed for 1 dozen roses. 
-                  Support your local florist while securing beautiful flowers for the future.
+                  1 FPC can be redeemed for 1 dozen roses. 
+                  Price is quoted on-chain in USDC/ETH by the deployed contract.
                 </p>
               </div>
 
