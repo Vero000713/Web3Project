@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { HashRouter as Router, Routes, Route } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import LandingPage from './pages/LandingPage'
@@ -21,6 +21,7 @@ function App() {
             <Route path="/merchant" element={<MerchantDashboard />} />
             <Route path="/redeem" element={<RedeemPage />} />
             <Route path="/compliance" element={<CompliancePage />} />
+            <Route path="*" element={<LandingPage />} />
           </Routes>
         </main>
         <Footer />
